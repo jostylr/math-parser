@@ -1,0 +1,32 @@
+{
+  "name": "math-parser",
+  "description": "A math parser in node",
+  "version": "0.1.0-pre",
+  "homepage": "https://github.com/jostylr/math-parser",
+  "author": {
+    "name": "James Taylor",
+    "email": "jostylr@gmail.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/jostylr/math-parser.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jostylr/math-parser/issues"
+  },
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "https://github.com/jostylr/math-parser/blob/master/LICENSE-MIT"
+    }
+  ],
+  "main": "index.js",
+  "engines": {
+    "node": ">0.6"
+  },
+  "dependencies":{
+    "event-when": ">0.2"
+  },
+  "keywords": ["math parser"],
+  "preferGlobal": "false"
+}
