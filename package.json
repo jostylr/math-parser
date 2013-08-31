@@ -25,7 +25,7 @@
     "node": ">0.6"
   },
   "dependencies":{
-    "event-when": ">0.2"
+    "event-when": ">=0.2.0"
   },
   "keywords": ["math parser"],
   "preferGlobal": "false"

@@ -9,7 +9,7 @@ The idea is to use events to parse mathematical expressions. There is no claim t
 * [package.json](#npm-package "save: json  | jshint") The requisite package file for a npm project. 
 * [TODO.md](#todo "save: | clean raw") A list of growing and shrinking items todo.
 * [LICENSE](#license-mit "save: | clean raw") The MIT license as I think that is the standard in the node community. 
-
+* [.gitignore](#gitignore "save: | clean raw")
 
 ## README
 
@@ -60,13 +60,15 @@ The requisite npm package file.
         "node": ">0.6"
       },
       "dependencies":{
-        "event-when": ">0.2"
+        "event-when": ">=0.2.0"
       },
       "keywords": ["math parser"],
       "preferGlobal": "false"
     }
 
+## gitignore
 
+node_modules
 
 ## LICENSE MIT
 
