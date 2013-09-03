@@ -2,9 +2,12 @@
 
 The idea is to use events to parse mathematical expressions. There is no claim to novelty, just an itch I would like to scratch and know about. 
 
+The main target will be ascii-math for now. It may expand into others, but I think that gives a good solid baseline. It may need to be modified as I am hoping for it to be computational friendly as well as display friendly. I also prefer `abc` to be a variable name while `a b c` would be the product of three variables. 
 
 ## Directory structure
 
+* [index.js](#parser "save: | jshint") The primary entry point into the module
+* [examples.json](#examples "save | jshint") A json of examples with supposed results
 * [README.md](#readme "save:| clean raw") The standard README.
 * [package.json](#npm-package "save: json  | jshint") The requisite package file for a npm project. 
 * [TODO.md](#todo "save: | clean raw") A list of growing and shrinking items todo.
@@ -21,6 +24,84 @@ Nothing yet ...
 Hopefully a multi-language (ascii-math, tex, maybe others) math parser that can easily convert math expressions into another form either for computation or printing. 
 
 Useful link on [parsers vs lexers](http://stackoverflow.com/questions/2842809/lexers-vs-parsers)
+
+
+## Parser
+
+This is the math parser engine. The idea is to take the text and chug along it, emitting events, gobbling up that which should be a term.
+
+    var EventWhen = require('event-when');
+
+
+    var emitter = new EventWhen();
+
+
+### Initialize Emitter
+
+    function () {
+
+    }
+
+### Next processing
+
+gonna try using regexp.lastIndexOf to start search on a string. Seemes like the best option: [RegexpAPI Wrong](http://blog.stevenlevithan.com/archives/fixing-javascript-regexp).
+
+
+    function (data, emitter) {
+        var i = data.i,
+            text = data.text;
+
+        if (i < text.length) {
+            data.char = text[i];
+            emitter.emit("found char", data);
+        } else {
+            emitter.emit("done parsing");
+        }
+        return true;
+    }
+
+### Number matching
+
+So the idea is that if the character is a number, then we try to parse out a number. It could also be just a period. We want to include the exponent part as well.
+
+
+
+### Letter matching
+
+Here we are looking for possible variable names. We consume it up until the first non word character: [A-Za-z0-9]
+
+This should be extended to include most unicode symbols or be extensible (wordreg could be exposed). 
+
+    function (data, emitter) {
+        var i = data.i,
+            text = data.text,
+            wordreg = /[A-Za-z][A-Za-z0-9]*/g;  //emitter.wordreg?
+
+        wordreg.lastIndex= i;
+        match = wordreg.exec(text);
+        if (match) {
+            data.i = match.lastIndex;
+            data.oldi = i;
+            data.word = match[0];
+            data.match = match;
+            emitter.emit("word found", data);
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+## Examples
+
+Lots of examples. Each key is the text to be parsed. This is follow by an object with the key as to how it is evaluated (number, tex, ?)
+
+    {
+        "5 + 3" : {number: 8, tex: "5 + 3"},
+        "6/3" : {number : 2, tex: "\frac{6}{3}"},
+        "6/3 + 5" : {number:7, tex: "\frac{6}{3} + 5"},
+        "6/(3+3)" : {number: 1, tex:"\frac{6}{3+3}"},
+        "f(x) = sin(x)\n f(pi)" : {number: 0, tex:"f(x) = \sin(x) \\\\ f(\pi)"}
+    }
 
 
 ## TODO
