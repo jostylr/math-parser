@@ -141,7 +141,7 @@ The requisite npm package file.
         "node": ">0.6"
       },
       "dependencies":{
-        "event-when": ">=0.2.0"
+        "event-when": "=0.5.0"
       },
       "keywords": ["math parser"],
       "preferGlobal": "false"
