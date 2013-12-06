@@ -4,6 +4,8 @@ The idea is to use events to parse mathematical expressions. There is no claim t
 
 The main target will be ascii-math for now. It may expand into others, but I think that gives a good solid baseline. It may need to be modified as I am hoping for it to be computational friendly as well as display friendly. I also prefer `abc` to be a variable name while `a b c` would be the product of three variables. 
 
+The ascii-math is with a caveat. It should also parse the math-numbers numbers into the various forms. 
+
 ## Directory structure
 
 * [index.js](#parser "save: | jshint") The primary entry point into the module
