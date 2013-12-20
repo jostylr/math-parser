@@ -2,9 +2,21 @@
 
 The idea is to use events to parse mathematical expressions. There is no claim to novelty, just an itch I would like to scratch and know about. 
 
-The main target will be ascii-math for now. It may expand into others, but I think that gives a good solid baseline. It may need to be modified as I am hoping for it to be computational friendly as well as display friendly. I also prefer `abc` to be a variable name while `a b c` would be the product of three variables. 
+The main target is something akin to ascii-math, but not exactly. It may expand into others, but I think that gives a good solid baseline. It may need to be modified as I am hoping for it to be computational friendly as well as display friendly. I also prefer `abc` to be a variable name while `a b c` would be the product of three variables. 
 
-The ascii-math is with a caveat. It should also parse the math-numbers numbers into the various forms. 
+It should also parse the math-numbers numbers into the various forms. 
+
+
+## Basic approach
+
+So it reads through the string, going for various matches. The one with the longest match should win. To accomplish this, each one listens for the character event. If it still can be a match, it continues. If not, it stops and decides whether it could match it or not (maybe insufficient to match). If it is a success, it waits for the done event and then contributes its length and maybe something else. If it is a failure, it removes itself from the process. 
+
+## Examples
+
+    2.03E4:15 x^3 + 
+
+    
+  
 
 ## Directory structure
 
@@ -98,12 +110,21 @@ This should be extended to include most unicode symbols or be extensible (wordre
 Lots of examples. Each key is the text to be parsed. This is follow by an object with the key as to how it is evaluated (number, tex, ?)
 
     {
-        "5 + 3" : {number: 8, tex: "5 + 3"},
-        "6/3" : {number : 2, tex: "\frac{6}{3}"},
+        "5 + 3" : {chain: "int(5).add(int(3))", number: 8, tex: "5 + 3"},
+        "6/3" : {chain: "int(6).div(int(3)", number : 2, tex: "\frac{6}{3}"},
         "6/3 + 5" : {number:7, tex: "\frac{6}{3} + 5"},
         "6/(3+3)" : {number: 1, tex:"\frac{6}{3+3}"},
         "f(x) = sin(x)\n f(pi)" : {number: 0, tex:"f(x) = \sin(x) \\\\ f(\pi)"}
     }
+
+6 3/5  |  int(6).add(int(3).div(int(5)))
+6.24 3  |  int(6).add(int(24).div(100)).add(int(3).div(9.mul(10^2))  |  6+24/100+3/900
+
+x = .3...
+10x = 3.3...
+9x = 3, x = 1/3
+
+rep/10^length-1
 
 
 ## TODO
