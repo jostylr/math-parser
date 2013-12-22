@@ -49,7 +49,13 @@ This is the math parser engine. The idea is to take the text and chug along it, 
 
     var emitter = new EventWhen();
 
-    emitter.register = emitter.when(
+    emitter.register = emitter.when([], "check matches");
+
+    emitter.matches = [];
+
+    emitter.on("check matches", function () {
+
+        });
 
     _"parser class"
 
@@ -87,19 +93,23 @@ Events array prototype. Make sure to overwrite this.events if you want to modify
 
     Parser.prototype.events = ["start", "next", "check matches", "end"];    
 
-Start causes an initialization and a listener to be added.
+Start causes an initialization and a listener to be added. It also increments the register .when which will lead to a firing of the check matches event.
 
     Parser.prototype.start = function (data, emitter) {
         this.chunk = "";
         emitter.on("next", this.next);
-        emitter.when("
+        emitter.register.add("parser instance done");
     }
+
+Next takes in a character and decides what to do. The default is to take one character and call it a day. Once done with trying to match (success or failure),  then the parser emits whatever was added to the register.
 
     Parser.prototype.next = function (data, emitter) {
         this.chunk += data.char;
         emitter.off("next", this.next);
-        emitter.of
+        emitter.emit("parser instance done");
     }
+
+Check matches will be called 
 
 
 ### Integer 
