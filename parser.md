@@ -11,6 +11,22 @@ It should also parse the math-numbers numbers into the various forms.
 
 So it reads through the string, going for various matches. The one with the longest match should win. To accomplish this, each one listens for the character event. If it still can be a match, it continues. If not, it stops and decides whether it could match it or not (maybe insufficient to match). If it is a success, it waits for the done event and then contributes its length and maybe something else. If it is a failure, it removes itself from the process. 
 
+## Usage Example
+
+This is an example program to using this library; replace './index.js' with 'math-parser'.
+
+    var Parser = require('./index.js');
+
+    var parser = new Parser();
+
+    parser.float.off(); // turns off the float parser so no float match
+
+    parser.complex.imag('I');  //replaces i with I for the imaginary unit in parsing complex numbers.
+
+    var parsed = parser.parse('1.3 + 5.4*6');
+
+    console.log(parsed.evaluate().str(), parsed.str(), parsed.original); // 33.7, Num.sci('1.3').add(Num.sci('5.4').mul('6'))
+
 ## Examples
 
     2.03E4:15 x^3 + 
@@ -51,11 +67,10 @@ This is the math parser engine. The idea is to take the text and chug along it, 
 
     emitter.register = emitter.when([], "check matches");
 
-    emitter.matches = [];
-
-    emitter.on("check matches", function () {
-
-        });
+    emitter.check = emitter.on("check matches", function (data, emitter) {
+        data.data..pop();
+        data.matches = [];
+    });
 
     _"parser class"
 
@@ -106,7 +121,7 @@ Next takes in a character and decides what to do. The default is to take one cha
     Parser.prototype.next = function (data, emitter) {
         this.chunk += data.char;
         emitter.off("next", this.next);
-        emitter.emit("parser instance done");
+        emitter.emit("parser instance done", data);
     }
 
 Check matches will be called 
@@ -143,9 +158,10 @@ An integer could consists of an optional sign and a variety of digits as well as
 
         if (i < text.length) {
             data.char = text[i];
+            data.i = i;
             emitter.emit("found char", data);
         } else {
-            emitter.emit("done parsing");
+            emitter.emit("no more characters", data);
         }
         return true;
     }
