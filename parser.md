@@ -11,6 +11,17 @@ It should also parse the math-numbers numbers into the various forms.
 
 So it reads through the string, going for various matches. The one with the longest match should win. To accomplish this, each one listens for the character event. If it still can be a match, it continues. If not, it stops and decides whether it could match it or not (maybe insufficient to match). If it is a success, it waits for the done event and then contributes its length and maybe something else. If it is a failure, it removes itself from the process. 
 
+## Directory structure
+
+* [index.js](#parser "save: | jshint") The primary entry point into the module
+* [examples.json](#examples "save | jshint") A json of examples with supposed results
+* [README.md](#readme "save:| clean raw") The standard README.
+* [package.json](#npm-package "save: json  | jshint") The requisite package file for a npm project. 
+* [TODO.md](#todo "save: | clean raw") A list of growing and shrinking items todo.
+* [LICENSE](#license-mit "save: | clean raw") The MIT license as I think that is the standard in the node community. 
+* [.gitignore](#gitignore "save: | clean raw")
+
+
 ## Usage Example
 
 This is an example program to using this library; replace './index.js' with 'math-parser'.
@@ -25,35 +36,12 @@ This is an example program to using this library; replace './index.js' with 'mat
 
     var parsed = parser.parse('1.3 + 5.4*6');
 
-    console.log(parsed.evaluate().str(), parsed.str(), parsed.original); // 33.7, Num.sci('1.3').add(Num.sci('5.4').mul('6'))
+    console.log(parsed.evaluate().str(), parsed.str(), parsed.original); // 33.7, Num.sci('1.3').add(Num.sci('5.4').mul('6')), '1.3 + 5.4*6'
 
-## Examples
+    var parsed = parser.parse('f(x) := e^(2x); f(5); x:10 | f(x) = 5 | 2 < x < 10; x+2.23');
 
-    2.03E4:15 x^3 + 
 
-    
-  
 
-## Directory structure
-
-* [index.js](#parser "save: | jshint") The primary entry point into the module
-* [examples.json](#examples "save | jshint") A json of examples with supposed results
-* [README.md](#readme "save:| clean raw") The standard README.
-* [package.json](#npm-package "save: json  | jshint") The requisite package file for a npm project. 
-* [TODO.md](#todo "save: | clean raw") A list of growing and shrinking items todo.
-* [LICENSE](#license-mit "save: | clean raw") The MIT license as I think that is the standard in the node community. 
-* [.gitignore](#gitignore "save: | clean raw")
-
-## README
-
-math-parser
- ================ 
-
-Nothing yet ...
-
-Hopefully a multi-language (ascii-math, tex, maybe others) math parser that can easily convert math expressions into another form either for computation or printing. 
-
-Useful link on [parsers vs lexers](http://stackoverflow.com/questions/2842809/lexers-vs-parsers)
 
 
 ## Parser
@@ -217,6 +205,18 @@ x = .3...
 9x = 3, x = 1/3
 
 rep/10^length-1
+
+
+## README
+
+math-parser
+ ================ 
+
+Nothing yet ...
+
+Hopefully a multi-language (ascii-math, tex, maybe others) math parser that can easily convert math expressions into another form either for computation or printing. 
+
+Useful link on [parsers vs lexers](http://stackoverflow.com/questions/2842809/lexers-vs-parsers)
 
 
 ## TODO
