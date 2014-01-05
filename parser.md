@@ -13,6 +13,7 @@ So it reads through the string, going for various matches. The one with the long
 
 ## Directory structure
 
+* [simple.js](#simple-parser "save: |jshint")
 * [index.js](#parser "save: | jshint") The primary entry point into the module
 * [examples.json](#examples "save | jshint") A json of examples with supposed results
 * [README.md](#readme "save:| clean raw") The standard README.
@@ -20,6 +21,27 @@ So it reads through the string, going for various matches. The one with the long
 * [TODO.md](#todo "save: | clean raw") A list of growing and shrinking items todo.
 * [LICENSE](#license-mit "save: | clean raw") The MIT license as I think that is the standard in the node community. 
 * [.gitignore](#gitignore "save: | clean raw")
+
+## Simple Parser
+
+So I just want a simple parser example that will split things up using spaces and then tries to parse out arithmetic. 
+
+We create a Parser constructor whose prototype will have the various methods and operators, etc.  
+
+It handles multiples instructions by multiple lines. So we first split it on new lines. The result of each line is stored in ans[line number] and the most recent line is in ans. Either can be used in the creation. 
+
+    var Parser = function () {
+        return this;
+    };
+
+    var pp = Parser.prototype;
+
+    pp.parse = function (str) {
+        lines = str.split("\n");
+        lines.forEach(function (el) {
+
+        }
+    };
 
 
 ## Usage Example
