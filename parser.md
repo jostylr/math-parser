@@ -26,9 +26,10 @@ So it reads through the string, going for various matches. The one with the long
 
 So I just want a simple parser example that will split things up using spaces and then tries to parse out arithmetic. 
 
-We create a Parser constructor whose prototype will have the various methods and operators, etc.  
+This will be a Pratt parser. We will tokenize as we move along. So we first consume what we find to convert into a token. Then we use that token in the Pratt algorithm, figuring out its binding power, etc. and going through the loop, sending it to do whatever actions are in the action method of the symbol. 
 
-It handles multiples instructions by multiple lines. So we first split it on new lines. The result of each line is stored in ans[line number] and the most recent line is in ans. Either can be used in the creation. 
+This is heavily based on (copied!) from [crockford](http://javascript.crockford.com/tdop/tdop.html)
+
 
     var Parser = function () {
         return this;
@@ -38,10 +39,94 @@ It handles multiples instructions by multiple lines. So we first split it on new
 
     pp.parse = function (str) {
         lines = str.split("\n");
+        var trees = [];
         lines.forEach(function (el) {
+            var tokens = el.split(/\s+/);
+            tokens.forEach(function (el) {
+                if (el === "ans") {
 
+                } else if ( ( m = el.match(/ans\[(\d+\])/) ) ) {
+
+                } else if ( ( op = this.operator(el) ) ) {
+
+                } else if ( ( par = this.bracket(el) ) ) 
+            });
+        });
+
+    };
+
+
+
+### Symbols
+
+We make a symbols to store symbols.
+
+    var symbols = {};
+
+
+This will create a symbol object. One puts in an id and binding power. An id is the key in the symbol_table. The token has a property 
+
+    var Symbol = function (id, bp) {
+        var s = symbols[id];
+        bp = bp || 0;
+        if (s) {
+
+We can bump up the binding power using this method. Not sure what happens with the lower one. Probably best to log this.
+
+            if (bp >= s.lbp) {
+                this.log("binding power raised: " + id + " from " + s.lbp + " to " + bp);
+                s.lbp = bp;
+            }
+        } else {
+            s = this;
+            s.id = s.value = id;
+            s.lbp = bp;
+            symbol_table[id] = s;
+        }
+        return s;
+    };
+
+The prototype of Symbol gives us some error reporting capabilities if not defined. We also add a log object.
+
+    var log = [];
+
+    Symbol.prototype = {
+        nud: function () {
+            this.error("Undefined.");
+        },
+        led: function (left) {
+            this.error("Missing operator.");
+        },
+        error: function (str) {
+            throw str;
+        },
+        log : function (arguments) {
+            log.push( Array.prototype.slice.call(arguments) );
         }
     };
+
+
+
+#### Simple symbols
+
+Here we have our simple symbol lists. These are end brackets, separators, etc.
+
+    symbol(":");
+    symbol(";");
+    symbol(",");
+    symbol(")");
+    symbol("]");
+    symbol("}");
+    symbol("else");
+
+
+The (end) symbol indicates the end of the token stream. The (name) symbol is the prototype for new names, such as variable names. The parentheses that I've included in the ids of these symbols avoid collisions with user-defined tokens.
+
+    symbol("(end)");
+    symbol("(name)");
+
+
+
 
 
 ## Usage Example
@@ -61,7 +146,6 @@ This is an example program to using this library; replace './index.js' with 'mat
     console.log(parsed.evaluate().str(), parsed.str(), parsed.original); // 33.7, Num.sci('1.3').add(Num.sci('5.4').mul('6')), '1.3 + 5.4*6'
 
     var parsed = parser.parse('f(x) := e^(2x); f(5); x:10 | f(x) = 5 | 2 < x < 10; x+2.23');
-
 
 
 
