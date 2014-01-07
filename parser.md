@@ -26,9 +26,6 @@ So it reads through the string, going for various matches. The one with the long
 
 So I just want a simple parser example that will split things up using spaces and then tries to parse out arithmetic. 
 
-This will be a Pratt parser. We will tokenize as we move along. So we first consume what we find to convert into a token. Then we use that token in the Pratt algorithm, figuring out its binding power, etc. and going through the loop, sending it to do whatever actions are in the action method of the symbol. 
-
-This is heavily based on (copied!) from [crockford](http://javascript.crockford.com/tdop/tdop.html)
 
 
     var Parser = function () {
@@ -57,40 +54,23 @@ This is heavily based on (copied!) from [crockford](http://javascript.crockford.
 
 
 
-### Symbols
+## Pratt Parser
 
-We make a symbols to store symbols.
+This will be a Pratt parser. We will tokenize as we move along. So we first consume what we find to convert into a token. Then we use that token in the Pratt algorithm, figuring out its binding power, etc. and going through the loop, sending it to do whatever actions are in the action method of the symbol. 
 
-    var symbols = {};
+This is heavily based on (copied!) from [crockford](http://javascript.crockford.com/tdop/tdop.html)
+
+But I want to be able to switch modes from one language to another easily. To this end, each language will have its own symbol table which will be accessed via this by a token. Also the advance function and other such things will be in the token property. 
+
+So here is our object chain: A Base object with common methods across languages. All tokens will have their prototype chains end with this base object. The next one up is the Language object which is different for each language one would use. This has the symbol table prototype that can then be used to create the live symbol tables when parsing strings (that could add symbols locally). It is on this that we create the initial  It could also be used to create forks of languages. Each symbol inherits from Base and each token will inherit from its symbol type. 
+
+When we want to parse a "program", then that creates a new state object which holds things such as the current token and the string itself. Each token should have it as a property under state. 
 
 
-This will create a symbol object. One puts in an id and binding power. An id is the key in the symbol_table. The token has a property 
+The prototype Base for symbols gives us some error reporting capabilities if not defined. We also add a log object. We use symbols as a prototype object for fully parsed tokens. As such, we also have the next method which deals with getting the next token from the string.
 
-    var Symbol = function (id, bp) {
-        var s = symbols[id];
-        bp = bp || 0;
-        if (s) {
 
-We can bump up the binding power using this method. Not sure what happens with the lower one. Probably best to log this.
-
-            if (bp >= s.lbp) {
-                this.log("binding power raised: " + id + " from " + s.lbp + " to " + bp);
-                s.lbp = bp;
-            }
-        } else {
-            s = this;
-            s.id = s.value = id;
-            s.lbp = bp;
-            symbol_table[id] = s;
-        }
-        return s;
-    };
-
-The prototype of Symbol gives us some error reporting capabilities if not defined. We also add a log object.
-
-    var log = [];
-
-    Symbol.prototype = {
+    var Base = {
         nud: function () {
             this.error("Undefined.");
         },
@@ -101,15 +81,117 @@ The prototype of Symbol gives us some error reporting capabilities if not define
             throw str;
         },
         log : function (arguments) {
-            log.push( Array.prototype.slice.call(arguments) );
+            this.log.push( Array.prototype.slice.call(arguments) );
+        },
+        languageMaker : function () {
+            var o = Object.create(this.proto);
+            o.symbols = {};
+            o.proto = o;
         }
+        symbolMaker : _"symbol maker",
+        advance : _"token advancement"
+    };
+
+    Base.proto = Base;
+
+The proto property is the object to use make the symbol. This allows for keeping the same symbol maker with the prototype varying from just changing the proto property on the object. If you need to. Also keeps references clearer, I suppose. 
+
+[example]()
+
+    var lang = Base.languageMaker();
+
+
+### Symbol Maker
+
+
+This will create a symbol object. One puts in an id and binding power. An id is the key in the symbols property. The token has a property 
+
+    function (id, bp) {
+        var s = this.symbols[id];
+        bp = bp || 0;
+        if (s) {
+
+We can bump up the binding power using this method. Not sure what happens with the lower one. Probably best to log this.
+
+            if (bp >= s.lbp) {
+                this.log("binding power raised: " + id + " from " + s.lbp + " to " + bp);
+                s.lbp = bp;
+            }
+        } else {
+            s = Object.create(this.proto);
+            s.id = s.value = id;
+            s.lbp = bp;
+            this.symbols[id] = s;
+        }
+        return s;
+    }
+
+
+
+
+### Token advancement
+
+We convert our text into tokens, as we go. There is a global token variable. (why?)
+
+The advance function takes in an option id to say when to stop, otherwise it just chugs along? 
+
+    function (id) {
+        var a, o, t, v, 
+            symbols = this.state.symbols, 
+            token = this.state.token;
+
+        if (id && token.id !== id) {
+            token.error("Expected '" + id + "'.");
+        }
+
+Each token will inherit a next function that will chunk up the next token. If the string ends, then it returns null and we get the end token. The return object of t should be a plain object that is used to fill in some properties of the official token.  
+
+        t = token.next();
+        if (t === null) {
+            token = Object.create(symbols["(end)"], t);
+            return;            
+        }
+
+        v = t.value;
+        a = t.type;
+
+        if (a === "name") {
+            o = scope.find(v);
+        } else if (a === "operator") {
+            o = symbol_table[v];
+            if (!o) {
+                t.error("Unknown operator.");
+            }
+        } else if (a === "string" || a ===  "number") {
+            a = "literal";
+            o = symbol_table["(literal)"];
+        } else {
+            t.error("Unexpected token.");
+        }
+        token = Object.create(o, t);
+        token.value = v;
+        token.arity = a;
+        return token;
     };
 
 
+### Language Arithmetic
+
+#### Next
+
+This is the next method that defines the tokenization of the string as it processes along
+
+    next : function () {
+        var toParse = this.toParse, token;
+        
+        _"nextToken"
+
+        return token;
+    },
 
 #### Simple symbols
 
-Here we have our simple symbol lists. These are end brackets, separators, etc.
+Here we have our simple symbol lists. These are end brackets, separators, etc. and are often the target of an advance() call.
 
     symbol(":");
     symbol(";");
@@ -124,7 +206,6 @@ The (end) symbol indicates the end of the token stream. The (name) symbol is the
 
     symbol("(end)");
     symbol("(name)");
-
 
 
 
