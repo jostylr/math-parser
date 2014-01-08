@@ -58,19 +58,50 @@ So I just want a simple parser example that will split things up using spaces an
 
 This will be a Pratt parser. We will tokenize as we move along. So we first consume what we find to convert into a token. Then we use that token in the Pratt algorithm, figuring out its binding power, etc. and going through the loop, sending it to do whatever actions are in the action method of the symbol. 
 
-This is heavily based on (copied!) from [crockford](http://javascript.crockford.com/tdop/tdop.html)
+This is heavily based on (copied!) from [crockford](http://javascript.crockford.com/tdop/tdop.html) The basic idea is that is that each token will have a binding power to the left. If it is stronger than what is currently dominating, then it will consume. If it is less than or equal, then the stuff to the left coalesces. 
 
-But I want to be able to switch modes from one language to another easily. To this end, each language will have its own symbol table which will be accessed via this by a token. Also the advance function and other such things will be in the token property. 
+Exampple:  a + b*c - d - e. a is 0,  + is 10,  a+b has a binding of 10, then it sees * which has a binding of 20. This is higher, so it keeps chugging, with b dangling. We get c and then we have the - which is 10. So the multiplication clicks in and we get b*c and then the + being equal to or less than the - leads to that being compiled. So we end up with  ((a + (b*c) ) - d) - e.  If we want right associative, then we lower the binding power by 1 on the right side. So then we would end up with (if - was right, but not +): ((a + (b*c) ) - (d - e) while if + was also right associative, then a + (b*c - (d - e) ). Whoosh. Not sure how the literals factor in. 
 
-So here is our object chain: A Base object with common methods across languages. All tokens will have their prototype chains end with this base object. The next one up is the Language object which is different for each language one would use. This has the symbol table prototype that can then be used to create the live symbol tables when parsing strings (that could add symbols locally). It is on this that we create the initial  It could also be used to create forks of languages. Each symbol inherits from Base and each token will inherit from its symbol type. 
+So this is a module that returns a function that takes in a string to parse and returns whatever the actions dictate being returned. For this projcet, I intend to do the computations as well a step-by-step to the text. 
 
-When we want to parse a "program", then that creates a new state object which holds things such as the current token and the string itself. Each token should have it as a property under state. 
+    /*jslint node:true*/
+
+    var itself = function () {
+        return this;
+    };
+
+    var scope, token, symbols;
+
+    var symbolProto = _"Symbol Prototype";
+
+    _"scope"
+
+    var next = _"next token please";
+
+    var advance = _"advance";
+
+    var statements = _"statements";
 
 
-The prototype Base for symbols gives us some error reporting capabilities if not defined. We also add a log object. We use symbols as a prototype object for fully parsed tokens. As such, we also have the next method which deals with getting the next token from the string.
+    module.exports = function (str) {
+        var ret = {};
 
+        token = symbols["(begin)"];
+        token.toParse = str;
+        token.end = 0; // this should be the start of the next token
+        scope = new Scope();
+        advance();
+        var s = statements();
+        advance("(end)");
+        scope = scope.pop();
+        return s;
+    };
 
-    var Base = {
+### Symbol Prototype
+
+The prototype object for the basic symbol object. 
+
+    {
         nud: function () {
             this.error("Undefined.");
         },
@@ -82,24 +113,8 @@ The prototype Base for symbols gives us some error reporting capabilities if not
         },
         log : function (arguments) {
             this.log.push( Array.prototype.slice.call(arguments) );
-        },
-        languageMaker : function () {
-            var o = Object.create(this.proto);
-            o.symbols = {};
-            o.proto = o;
         }
-        symbolMaker : _"symbol maker",
-        advance : _"token advancement"
-    };
-
-    Base.proto = Base;
-
-The proto property is the object to use make the symbol. This allows for keeping the same symbol maker with the prototype varying from just changing the proto property on the object. If you need to. Also keeps references clearer, I suppose. 
-
-[example]()
-
-    var lang = Base.languageMaker();
-
+    }
 
 ### Symbol Maker
 
@@ -107,7 +122,7 @@ The proto property is the object to use make the symbol. This allows for keeping
 This will create a symbol object. One puts in an id and binding power. An id is the key in the symbols property. The token has a property 
 
     function (id, bp) {
-        var s = this.symbols[id];
+        var s = symbols[id];
         bp = bp || 0;
         if (s) {
 
@@ -118,10 +133,10 @@ We can bump up the binding power using this method. Not sure what happens with t
                 s.lbp = bp;
             }
         } else {
-            s = Object.create(this.proto);
+            s = Object.create(symbolProto);
             s.id = s.value = id;
             s.lbp = bp;
-            this.symbols[id] = s;
+            symbols[id] = s;
         }
         return s;
     }
@@ -136,9 +151,7 @@ We convert our text into tokens, as we go. There is a global token variable. (wh
 The advance function takes in an option id to say when to stop, otherwise it just chugs along? 
 
     function (id) {
-        var a, o, t, v, 
-            symbols = this.state.symbols, 
-            token = this.state.token;
+        var a, o, t, v;
 
         if (id && token.id !== id) {
             token.error("Expected '" + id + "'.");
@@ -148,38 +161,132 @@ Each token will inherit a next function that will chunk up the next token. If th
 
         t = token.next();
         if (t === null) {
-            token = Object.create(symbols["(end)"], t);
+            token = symbols["(end)"];
             return;            
         }
 
         v = t.value;
         a = t.type;
 
-        if (a === "name") {
-            o = scope.find(v);
-        } else if (a === "operator") {
-            o = symbol_table[v];
-            if (!o) {
-                t.error("Unknown operator.");
-            }
-        } else if (a === "string" || a ===  "number") {
-            a = "literal";
-            o = symbol_table["(literal)"];
-        } else {
-            t.error("Unexpected token.");
-        }
+
+        _"advance token types"
+
+
         token = Object.create(o, t);
         token.value = v;
         token.arity = a;
         return token;
     };
 
+#### Advance token types
 
-### Language Arithmetic
+This is likely to be the same for all programming languages, but it may need replacing if attempting markup languages (not really sure, not sure if this technique is useful for those -- interested to see, but this is largely for precedence which seems mainly an issue for programming languages and arithmetic). 
+
+Variable a is the type, o is the object that will be used as the prototype to create the token (properties come from the return of next which is in the variable t). 
+
+    if (a === "name") {
+        o = scope.find(v);
+    } else if (a === "operator") {
+        o = symbols[v];
+        if (!o) {
+            t.error("Unknown operator.");
+        }
+    } else if (a === "string" || a ===  "number") {
+        a = "literal";
+        o = symbols["(literal)"];
+    } else {
+        t.error("Unexpected token.");
+    }
+
+### Scope
+
+So Crockford also implemented a scope for the variables. I changed it to the new style since it was essentially this. The variable n stands in for name, I think. e is largely a scope variable, I believe.
+
+    var Scope = function (parent) {
+        this.def = {};
+        this.parent = parent;
+        return this;
+    };
+
+    Scope.prototype = {
+        define: function (n) {
+            var t = this.def[n.value];
+            if (typeof t === "object") {
+                n.error(t.reserved ? "Already reserved." : "Already defined.");
+            }
+            this.def[n.value] = n;
+            n.reserved = false;
+            n.nud      = itself;
+            n.led      = null;
+            n.std      = null;
+            n.lbp      = 0;
+            n.scope    = scope;
+            return n;
+        },
+        find: function (n) {
+            var e = this, o;
+            while (true) {
+                o = e.def[n];
+                if (o && typeof o !== 'function') {
+                    return e.def[n];
+                }
+                e = e.parent;
+                if (!e) {
+                    o = symbols[n];
+                    return o && typeof o !== 'function' ? o : symbols["(name)"];
+                }
+            }
+        },
+        pop: function () {
+            return this.parent;
+        },
+        reserve: function (n) {
+            if (n.arity !== "name" || n.reserved) {
+                return;
+            }
+            var t = this.def[n.value];
+            if (t) {
+                if (t.reserved) {
+                    return;
+                }
+                if (t.arity === "name") {
+                    n.error("Already defined.");
+                }
+            }
+            this.def[n.value] = n;
+            n.reserved = true;
+        }
+    };
+
+### Expression
+
+This is the heart of the technique, as Crockford says. Basically, this implements the binding precedence levels. So does this operator grab bind more closely to the left thing than the previous one did to the right of it? So  a E b F c  and we need to know if (a E b) F c or  a E (b F c).  
+
+It is very important to understand this. We pass in a right binidng power (E's bp). We are currently processing E with left already being assigned to a  (mostly).  So then we advance and get to b. This becomes the new left with the .nud yielding a something (not operator). Then we start through the loop. Presumably, rbp ??
+
+
+    var expression = function (rbp) {
+        var left;
+        var t = token;
+        advance();
+        left = t.nud();
+        while (rbp < token.lbp) {
+            t = token;
+            advance();
+            left = t.led(left);
+        }
+        return left;
+    };
+
+### Language Specific
+
+The above should be very general Pratt parser setup. What happens below is language specific. If this all works, the above should be split into its own little litpro template module. A bit like pegjs. 
 
 #### Next
 
 This is the next method that defines the tokenization of the string as it processes along
+
+It should return the next token or null if the string is exahusted. 
 
     next : function () {
         var toParse = this.toParse, token;
