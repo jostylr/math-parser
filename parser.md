@@ -80,6 +80,8 @@ So this is a module that returns a function that takes in a string to parse and 
 
     var advance = _"advance";
 
+    var expression = _"expression";
+
     var statements = _"statements";
 
 
@@ -288,28 +290,57 @@ This is the next method that defines the tokenization of the string as it proces
 
 It should return the next token or null if the string is exahusted. 
 
-    next : function () {
-        var toParse = this.toParse, token;
-        
-        _"nextToken"
+    function () {
+        var start = this.end, 
+            str = this.toParse.slice(start),
+            ret = {toParse: this.toParse, 
+                    start : start},
+            x;
 
-        return token;
-    },
+We need to strip out some whitespace and account for it with the start position.
+
+        var leading = str.match(/( +)/);
+        if (leading) {
+            str = str.slice(leading.length);
+            start += leading.length;
+        }
+
+Now we can try to match it. We try to match number first, then a name, and finally 
+
+        if ( (str.slice(start, start+1).match(/^-\d|^\d/) || ) {
+            x = Num(str);
+            ret.end = start+x.original.length;
+            ret.value = x;
+            ret.type = "number";
+        } else if ( ( m = str.match(/^[a-zA-Z]+/) ) ) {
+            ret.value = m[0];
+            ret.end = start + m[0].length;
+            ret.type = "name";
+        } else {
+            for (i = 3; i >0; i-=1) {
+                sli = str.lice(start, i);
+                if (symbols.hasOwnProperty(sli) ) {
+                    ret.value = sli;
+                    ret.end = start + i;
+                    ret.type = "operator"
+                }
+            }
+        }
+
+        return ret;
+    }
+
 
 #### Simple symbols
 
 Here we have our simple symbol lists. These are end brackets, separators, etc. and are often the target of an advance() call.
 
-    symbol(":");
-    symbol(";");
-    symbol(",");
+    symbol("\n");
     symbol(")");
     symbol("]");
-    symbol("}");
-    symbol("else");
 
 
-The (end) symbol indicates the end of the token stream. The (name) symbol is the prototype for new names, such as variable names. The parentheses that I've included in the ids of these symbols avoid collisions with user-defined tokens.
+The (end) symbol indicates the end of the token stream. The (name) symbol is the prototype for new names, such as variable names. By having parentheses, we avoid name collisions. Note that in the tokenizer used here, it could to trouble if the length being checked is as long as one of these symbols, i.e., if the length being checked was 5, then (end) in the program would match (end) instead of "(". 
 
     symbol("(end)");
     symbol("(name)");
