@@ -13,7 +13,7 @@ So it reads through the string, going for various matches. The one with the long
 
 ## Directory structure
 
-* [simple.js](#simple-parser "save: |jshint")
+* [pratt.js](#pratt-parser "save: |jshint")
 * [index.js](#parser "save: | jshint") The primary entry point into the module
 * [examples.json](#examples "save | jshint") A json of examples with supposed results
 * [README.md](#readme "save:| clean raw") The standard README.
@@ -64,26 +64,29 @@ Exampple:  a + b*c - d - e. a is 0,  + is 10,  a+b has a binding of 10, then it 
 
 So this is a module that returns a function that takes in a string to parse and returns whatever the actions dictate being returned. For this projcet, I intend to do the computations as well a step-by-step to the text. 
 
-    /*jslint node:true*/
+    /*jslint node:true, strict:false*/
+
+    var Num = require("math-numbers");
 
     var itself = function () {
         return this;
     };
 
-    var scope, token, symbols;
+    var scope, token, symbols = {};
 
     var symbolProto = _"Symbol Prototype";
 
     _"scope"
 
-    var next = _"next token please";
-
     var advance = _"advance";
 
     var expression = _"expression";
 
-    var statements = _"statements";
+    _"statements"
 
+    _"symbol makers"
+
+    _"actual symbols"
 
     module.exports = function (str) {
         var ret = {};
@@ -92,8 +95,11 @@ So this is a module that returns a function that takes in a string to parse and 
         token.toParse = str;
         token.end = 0; // this should be the start of the next token
         scope = new Scope();
+        console.log("preadvance", token);
         advance();
+        console.log("post", token);
         var s = statements();
+        console.log("s", s);
         advance("(end)");
         scope = scope.pop();
         return s;
@@ -113,17 +119,18 @@ The prototype object for the basic symbol object.
         error: function (str) {
             throw str;
         },
-        log : function (arguments) {
+        log : function () {
             this.log.push( Array.prototype.slice.call(arguments) );
-        }
+        }, 
+        next : _"next"
     }
 
-### Symbol Maker
+### Symbol Makers
 
 
 This will create a symbol object. One puts in an id and binding power. An id is the key in the symbols property. The token has a property 
 
-    function (id, bp) {
+    var symbol = function (id, bp) {
         var s = symbols[id];
         bp = bp || 0;
         if (s) {
@@ -141,19 +148,97 @@ We can bump up the binding power using this method. Not sure what happens with t
             symbols[id] = s;
         }
         return s;
-    }
+    };
+
+A constant builds constants into the language. ?
+
+    var constant = function (s, v) {
+        var x = symbol(s);
+        x.nud = function () {
+            scope.reserve(this);
+            this.value = symbols[this.id].value;
+            this.arity = "literal";
+            return this;
+        };
+        x.value = v;
+        return x;
+    };
+
+This is the bread and butter. An infix operator is a binary operator in the middle. 
+
+    var infix = function (id, bp, led) {
+        var s = symbol(id, bp);
+        s.led = led || function (left) {
+            this.first = left;
+            console.log("left", left);
+            this.second = expression(bp);
+            this.arity = "binary";
+            return this;
+        };
+        return s;
+    };
+
+
+Infixr is like infix except the binding should be to the right. So we subtract one from the binding power. 
+
+    var infixr = function (id, bp, led) {
+        var s = symbol(id, bp);
+        s.led = led || function (left) {
+            this.first = left;
+            this.second = expression(bp - 1);
+            this.arity = "binary";
+            return this;
+        };
+        return s;
+    };
+
+Assignments are infixr, but we also want to add in a bit more.
+
+    var assignment = function (id) {
+        return infixr(id, 10, function (left) {
+            if (left.id !== "." && left.id !== "[" && left.arity !== "name") {
+                left.error("Bad lvalue.");
+            }
+            this.first = left;
+            this.second = expression(9);
+            this.assignment = true;
+            this.arity = "binary";
+            return this;
+        });
+    };
+
+A prefix symbol comes first, such as a negative sign. Note that our minus sign in front of a literal number is absorbed into the number, but it is still important for variables. 
+
+    var prefix = function (id, nud) {
+        var s = symbol(id);
+        s.nud = nud || function () {
+            scope.reserve(this);
+            this.first = expression(70);
+            this.arity = "unary";
+            return this;
+        };
+        return s;
+    };
+
+Adding statement symbols. 
+
+    var stmt = function (s, f) {
+        var x = symbol(s);
+        x.std = f;
+        return x;
+    };
 
 
 
 
-### Token advancement
+### Advance
 
 We convert our text into tokens, as we go. There is a global token variable. (why?)
 
 The advance function takes in an option id to say when to stop, otherwise it just chugs along? 
 
     function (id) {
-        var a, o, t, v;
+        var a, o, t, v, key;
 
         if (id && token.id !== id) {
             token.error("Expected '" + id + "'.");
@@ -173,12 +258,15 @@ Each token will inherit a next function that will chunk up the next token. If th
 
         _"advance token types"
 
-
-        token = Object.create(o, t);
+        token = Object.create(o);
+        for (key in t) {
+            token[key] = t[key];
+        }
         token.value = v;
         token.arity = a;
+        console.log(token);
         return token;
-    };
+    }
 
 #### Advance token types
 
@@ -191,13 +279,14 @@ Variable a is the type, o is the object that will be used as the prototype to cr
     } else if (a === "operator") {
         o = symbols[v];
         if (!o) {
-            t.error("Unknown operator.");
+            token.error("Unknown operator.");
         }
     } else if (a === "string" || a ===  "number") {
         a = "literal";
         o = symbols["(literal)"];
     } else {
-        t.error("Unexpected token.");
+        o = symbols["(error)"];
+        token.error("Unexpected token."+t+a+v);
     }
 
 ### Scope
@@ -267,10 +356,12 @@ This is the heart of the technique, as Crockford says. Basically, this implement
 It is very important to understand this. We pass in a right binidng power (E's bp). We are currently processing E with left already being assigned to a  (mostly).  So then we advance and get to b. This becomes the new left with the .nud yielding a something (not operator). Then we start through the loop. Presumably, rbp ??
 
 
-    var expression = function (rbp) {
+    function (rbp) {
         var left;
         var t = token;
+        console.log("exp pread", token);
         advance();
+        console.log("exp postad", token, token.lbp);
         left = t.nud();
         while (rbp < token.lbp) {
             t = token;
@@ -278,7 +369,51 @@ It is very important to understand this. We pass in a right binidng power (E's b
             left = t.led(left);
         }
         return left;
+    }
+    
+### Statements
+
+Now some statement work
+
+    var statement = function () {
+        var n = token, v;
+        console.log("hi", n);
+        if (n.std) {
+            advance();
+            scope.reserve(n);
+            return n.std();
+        }
+        console.log("bye");
+        v = expression(0);
+        console.log("exp", token);
+        //if (!v.assignment && v.id !== "(") {
+        //    v.error("Bad expression statement.");
+        //}
+        advance(";");
+        return v;
     };
+
+    var statements = function () {
+        var a = [], s;
+        while (true) {
+            if (token.id === "}" || token.id === "(end)") {
+                break;
+            }
+            s = statement();
+            if (s) {
+                a.push(s);
+            }
+        }
+        return a.length === 0 ? null : a.length === 1 ? a[0] : a;
+    };
+
+    var block = function () {
+        var t = token;
+        advance("{");
+        return t.std();
+    };
+
+
 
 ### Language Specific
 
@@ -295,19 +430,19 @@ It should return the next token or null if the string is exahusted.
             str = this.toParse.slice(start),
             ret = {toParse: this.toParse, 
                     start : start},
-            x;
+            x, m, i, sli;
 
 We need to strip out some whitespace and account for it with the start position.
 
         var leading = str.match(/( +)/);
         if (leading) {
             str = str.slice(leading.length);
-            start += leading.length;
+            ret.start = start += leading.length;
         }
 
 Now we can try to match it. We try to match number first, then a name, and finally 
 
-        if ( (str.slice(start, start+1).match(/^-\d|^\d/) || ) {
+        if ( ( str.match(/^-\d|^\d/) ) ) {
             x = Num(str);
             ret.end = start+x.original.length;
             ret.value = x;
@@ -318,32 +453,66 @@ Now we can try to match it. We try to match number first, then a name, and final
             ret.type = "name";
         } else {
             for (i = 3; i >0; i-=1) {
-                sli = str.lice(start, i);
+                sli = str.slice(0, i);
+                console.log(sli);
                 if (symbols.hasOwnProperty(sli) ) {
                     ret.value = sli;
-                    ret.end = start + i;
-                    ret.type = "operator"
+                    ret.end = start + sli.length;
+                    ret.type = "operator";
                 }
+            }
+            if (!ret.value) {
+                return null;
             }
         }
 
+        console.log(ret)
         return ret;
     }
 
 
-#### Simple symbols
+#### Actual symbols
 
 Here we have our simple symbol lists. These are end brackets, separators, etc. and are often the target of an advance() call.
 
     symbol("\n");
+    symbol(";");
     symbol(")");
     symbol("]");
 
 
 The (end) symbol indicates the end of the token stream. The (name) symbol is the prototype for new names, such as variable names. By having parentheses, we avoid name collisions. Note that in the tokenizer used here, it could to trouble if the length being checked is as long as one of these symbols, i.e., if the length being checked was 5, then (end) in the program would match (end) instead of "(". 
 
+    symbol("(begin)");
     symbol("(end)");
     symbol("(name)");
+    symbol("(literal)").nud = itself;    
+    symbol("(error)");
+
+
+Then the infix operators
+
+    infix("+", 50);
+    infix("-", 50);
+
+    infix("*", 60);
+    infix("/", 60);
+
+The exponential is an infixr
+
+    infixr("^", 70);
+
+Some prefix
+
+    prefix("(", function () {
+        var e = expression(0);
+        advance(")");
+        return e;
+    });
+
+
+    prefix("-");
+
 
 
 
@@ -381,7 +550,7 @@ This is the math parser engine. The idea is to take the text and chug along it, 
     emitter.register = emitter.when([], "check matches");
 
     emitter.check = emitter.on("check matches", function (data, emitter) {
-        data.data..pop();
+        data.data.pop();
         data.matches = [];
     });
 
@@ -581,7 +750,8 @@ The requisite npm package file.
         "node": ">0.6"
       },
       "dependencies":{
-        "event-when": "=0.5.0"
+        "event-when": "=0.5.0",
+        "math-numbers": ">=0.1.0"
       },
       "keywords": ["math parser"],
       "preferGlobal": "false"
