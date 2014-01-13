@@ -46,7 +46,6 @@ var symbolProto = {
                 } else {
                     for (i = 3; i >0; i-=1) {
                         sli = str.slice(0, i);
-                        console.log(sli);
                         if (symbols.hasOwnProperty(sli) ) {
                             ret.value = sli;
                             ret.end = start + sli.length;
@@ -58,7 +57,6 @@ var symbolProto = {
                     }
                 }
             
-                console.log(ret)
                 return ret;
             }
     };
@@ -123,7 +121,16 @@ var advance = function (id) {
         var a, o, t, v, key;
     
         if (id && token.id !== id) {
-            token.error("Expected '" + id + "'.");
+            if (!( Array.prototype.some.call(arguments, function (el) {
+                return (el === token.id) ;
+            }) ) ) {
+                console.log(token);
+                token.error("Found " + token.id+ ". Expected one of'" +  Array.prototype.join.call(arguments, ", ")  + "'.");
+            } 
+        }
+    
+        if (token.id === "(end)") {
+            return token;
         }
     
         t = token.next();
@@ -156,16 +163,13 @@ var advance = function (id) {
         }
         token.value = v;
         token.arity = a;
-        console.log(token);
         return token;
     };
 
 var expression = function (rbp) {
         var left;
         var t = token;
-        console.log("exp pread", token);
         advance();
-        console.log("exp postad", token, token.lbp);
         left = t.nud();
         while (rbp < token.lbp) {
             t = token;
@@ -177,25 +181,23 @@ var expression = function (rbp) {
 
 var statement = function () {
     var n = token, v;
-    console.log("hi", n);
     if (n.std) {
         advance();
         scope.reserve(n);
         return n.std();
     }
-    console.log("bye");
     v = expression(0);
-    console.log("exp", token);
     //if (!v.assignment && v.id !== "(") {
     //    v.error("Bad expression statement.");
     //}
-    advance(";");
+    advance(";", "\n", "(end)");
     return v;
 };
 
 var statements = function () {
     var a = [], s;
     while (true) {
+        console.log("while", token);
         if (token.id === "}" || token.id === "(end)") {
             break;
         }
@@ -247,7 +249,6 @@ var infix = function (id, bp, led) {
     var s = symbol(id, bp);
     s.led = led || function (left) {
         this.first = left;
-        console.log("left", left);
         this.second = expression(bp);
         this.arity = "binary";
         return this;
@@ -330,11 +331,8 @@ module.exports = function (str) {
     token.toParse = str;
     token.end = 0; // this should be the start of the next token
     scope = new Scope();
-    console.log("preadvance", token);
     advance();
-    console.log("post", token);
     var s = statements();
-    console.log("s", s);
     advance("(end)");
     scope = scope.pop();
     return s;

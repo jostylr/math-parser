@@ -26,7 +26,7 @@
   },
   "dependencies":{
     "event-when": "=0.5.0",
-    "math-numbers": ">=0.1.0"
+    "math-numbers": ">=0.1.1"
   },
   "keywords": ["math parser"],
   "preferGlobal": "false"

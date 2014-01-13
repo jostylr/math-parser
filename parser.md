@@ -95,11 +95,8 @@ So this is a module that returns a function that takes in a string to parse and 
         token.toParse = str;
         token.end = 0; // this should be the start of the next token
         scope = new Scope();
-        console.log("preadvance", token);
         advance();
-        console.log("post", token);
         var s = statements();
-        console.log("s", s);
         advance("(end)");
         scope = scope.pop();
         return s;
@@ -170,7 +167,6 @@ This is the bread and butter. An infix operator is a binary operator in the midd
         var s = symbol(id, bp);
         s.led = led || function (left) {
             this.first = left;
-            console.log("left", left);
             this.second = expression(bp);
             this.arity = "binary";
             return this;
@@ -241,7 +237,11 @@ The advance function takes in an option id to say when to stop, otherwise it jus
         var a, o, t, v, key;
 
         if (id && token.id !== id) {
-            token.error("Expected '" + id + "'.");
+            _"multiple ids in advance"
+        }
+
+        if (token.id === "(end)") {
+            return token;
         }
 
 Each token will inherit a next function that will chunk up the next token. If the string ends, then it returns null and we get the end token. The return object of t should be a plain object that is used to fill in some properties of the official token.  
@@ -264,7 +264,6 @@ Each token will inherit a next function that will chunk up the next token. If th
         }
         token.value = v;
         token.arity = a;
-        console.log(token);
         return token;
     }
 
@@ -288,6 +287,21 @@ Variable a is the type, o is the object that will be used as the prototype to cr
         o = symbols["(error)"];
         token.error("Unexpected token."+t+a+v);
     }
+
+#### Multiple ids in advance
+
+We want to be able to have multiple ids for advance. Not sure if this is a good idea, but seems to be needed for statement terminations.
+
+The idea is that if we have an operator at the end of a line, then we know the line continues (such as a comma or something). Otherwise, newline terminates. Semicolons can also be used to terminate a statement. We aim to be flexible. Yeah, I haven't learned from JavaScript's mistakes :) 
+
+Check to see if any match. 
+
+    if (!( Array.prototype.some.call(arguments, function (el) {
+        return (el === token.id) ;
+    }) ) ) {
+        console.log(token);
+        token.error("Found " + token.id+ ". Expected one of'" +  Array.prototype.join.call(arguments, ", ")  + "'.");
+    } 
 
 ### Scope
 
@@ -359,9 +373,7 @@ It is very important to understand this. We pass in a right binidng power (E's b
     function (rbp) {
         var left;
         var t = token;
-        console.log("exp pread", token);
         advance();
-        console.log("exp postad", token, token.lbp);
         left = t.nud();
         while (rbp < token.lbp) {
             t = token;
@@ -377,25 +389,23 @@ Now some statement work
 
     var statement = function () {
         var n = token, v;
-        console.log("hi", n);
         if (n.std) {
             advance();
             scope.reserve(n);
             return n.std();
         }
-        console.log("bye");
         v = expression(0);
-        console.log("exp", token);
         //if (!v.assignment && v.id !== "(") {
         //    v.error("Bad expression statement.");
         //}
-        advance(";");
+        advance(";", "\n", "(end)");
         return v;
     };
 
     var statements = function () {
         var a = [], s;
         while (true) {
+            console.log("while", token);
             if (token.id === "}" || token.id === "(end)") {
                 break;
             }
@@ -454,7 +464,6 @@ Now we can try to match it. We try to match number first, then a name, and final
         } else {
             for (i = 3; i >0; i-=1) {
                 sli = str.slice(0, i);
-                console.log(sli);
                 if (symbols.hasOwnProperty(sli) ) {
                     ret.value = sli;
                     ret.end = start + sli.length;
@@ -466,7 +475,6 @@ Now we can try to match it. We try to match number first, then a name, and final
             }
         }
 
-        console.log(ret)
         return ret;
     }
 
@@ -701,6 +709,14 @@ x = .3...
 rep/10^length-1
 
 
+x: 1 = sin(x)
+
+x:5 1 = sin(x), 0 < x < pi, x~2, 
+
+
+
+
+
 ## README
 
 math-parser
@@ -751,7 +767,7 @@ The requisite npm package file.
       },
       "dependencies":{
         "event-when": "=0.5.0",
-        "math-numbers": ">=0.1.0"
+        "math-numbers": ">=0.1.1"
       },
       "keywords": ["math parser"],
       "preferGlobal": "false"
