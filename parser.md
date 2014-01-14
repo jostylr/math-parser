@@ -522,8 +522,51 @@ Some prefix
 
     prefix("-");
 
+## Walker
+
+So now that we have a parsed out tree of statements, we should do something with it. Two obvious uses would be to compute out answers and printing out the math.
+
+How are we going to do this? We have two big options. One is to embed this in the parsing. This is probably a bad idea. Instead, we will act on the given structure. We are returned an array of statements so we walk through the expressions. 
+
+The walker will be part of the prototype of the base symbol. This allows us to override it for any particular instance or subclass it. When invoked, the walker should be provided an object of actions that are called by using the arity followed by the value. 
 
 
+    function (actions) {
+
+    }
+
+
+### Computation actions
+
+This would be an actions object for doing computations. 
+
+    {   unary : {
+            "-" : function (first) {
+                return first.negate();
+            }
+        },
+        binary : {
+            "+" : function (left, right) {
+                return left.add(right);
+            },
+            "-" : function (left, right) {
+                return left.sub(right);
+            },
+            "*" : function (left, right) {
+                return left.mul(right);
+            },
+            "/" : function (left, right) {
+                return left.div(right);
+            },
+            "^" : function (left, right) {
+                return left.ipow(right);  // !!!! should change this to pow when I have it
+            }
+        },
+        literal : {
+            
+
+
+    }
 
 ## Usage Example
 
