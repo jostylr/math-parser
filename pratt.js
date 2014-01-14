@@ -28,13 +28,14 @@ var symbolProto = {
                             start : start},
                     x, m, i, sli;
             
-                var leading = str.match(/( +)/);
+                var leading = (token.type === "operator") ? str.match(/^\s+/)  : str.match(/^( +)/);
+                console.log(leading);
                 if (leading) {
                     str = str.slice(leading.length);
                     ret.start = start += leading.length;
                 }
             
-                if ( ( str.match(/^-\d|^\d/) ) ) {
+                if ( ( str.match(/^\d/) ) ) {
                     x = Num(str);
                     ret.end = start+x.original.length;
                     ret.value = x;

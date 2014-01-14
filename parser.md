@@ -442,9 +442,10 @@ It should return the next token or null if the string is exahusted.
                     start : start},
             x, m, i, sli;
 
-We need to strip out some whitespace and account for it with the start position.
+We need to strip out some whitespace and account for it with the start position. If the current token is an operator, then newlines do not terminate the expression and are considered whitespace. Otherwise newlines 
 
-        var leading = str.match(/( +)/);
+        var leading = (token.type === "operator") ? str.match(/^\s+/)  : str.match(/^( +)/);
+        console.log(leading);
         if (leading) {
             str = str.slice(leading.length);
             ret.start = start += leading.length;
@@ -452,7 +453,7 @@ We need to strip out some whitespace and account for it with the start position.
 
 Now we can try to match it. We try to match number first, then a name, and finally 
 
-        if ( ( str.match(/^-\d|^\d/) ) ) {
+        if ( ( str.match(/^\d/) ) ) {
             x = Num(str);
             ret.end = start+x.original.length;
             ret.value = x;
@@ -520,7 +521,6 @@ Some prefix
 
 
     prefix("-");
-
 
 
 
