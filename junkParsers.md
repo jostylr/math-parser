@@ -157,3 +157,148 @@ The (end) symbol indicates the end of the token stream. The (name) symbol is the
     symbol("(end)");
     symbol("(name)");
 
+
+## Event Parsing
+
+
+
+## Parser
+
+This is the math parser engine. The idea is to take the text and chug along it, emitting events, gobbling up that which should be a term.
+
+    var EventWhen = require('event-when');
+
+
+    var emitter = new EventWhen();
+
+    emitter.register = emitter.when([], "check matches");
+
+    emitter.check = emitter.on("check matches", function (data, emitter) {
+        data.data.pop();
+        data.matches = [];
+    });
+
+    _"parser class"
+
+### Events
+
+Let's diagram out what the events should be.
+
+start  | this is to indicate the start of a new token parsing
+next |  this is the next character to be analyzed
+check matches | emitted from a .when that is tracking all possible parser matches
+end | the end of the string is reached
+
+
+### Parser Class
+
+Each parser type will be doing very similar stuff. So let's create a class to deal with it. 
+
+Most of the prototypes should, in general, be overwritten. But this provides a template. The handler methods can/should be passed an object whose keys will be added to the this. After they are loaded, then the relevant methods are loaded as listeners. 
+
+    var Parser =     function (obj, emitter) {
+        var key, 
+            self = this;
+
+        for (key in obj) {
+            this[key] = obj[key];
+        }
+        this.events.forEach(function (el) {
+            emitter.on(el, [ [self, self[el], {}]] );
+        });
+
+        return this;
+    }
+
+Events array prototype. Make sure to overwrite this.events if you want to modify it otherwise the events will change for all Parser instances.
+
+    Parser.prototype.events = ["start", "next", "check matches", "end"];    
+
+Start causes an initialization and a listener to be added. It also increments the register .when which will lead to a firing of the check matches event.
+
+    Parser.prototype.start = function (data, emitter) {
+        this.chunk = "";
+        emitter.on("next", this.next);
+        emitter.register.add("parser instance done");
+    }
+
+Next takes in a character and decides what to do. The default is to take one character and call it a day. Once done with trying to match (success or failure),  then the parser emits whatever was added to the register.
+
+    Parser.prototype.next = function (data, emitter) {
+        this.chunk += data.char;
+        emitter.off("next", this.next);
+        emitter.emit("parser instance done", data);
+    }
+
+Check matches will be called 
+
+
+### Integer 
+
+An integer could consists of an optional sign and a variety of digits as well as a separator (comma in us). No spaces involved. 
+
+    
+    emitter.on("start", function () 
+
+
+
+### Parentheticals
+
+
+
+
+### Initialize Emitter
+
+    function () {
+
+    }
+
+### Next processing
+
+???? gonna try using regexp.lastIndexOf to start search on a string. Seemes like the best option: [RegexpAPI Wrong](http://blog.stevenlevithan.com/archives/fixing-javascript-regexp).
+
+
+    function (data, emitter) {
+        var i = data.i,
+            text = data.text;
+
+        if (i < text.length) {
+            data.char = text[i];
+            data.i = i;
+            emitter.emit("found char", data);
+        } else {
+            emitter.emit("no more characters", data);
+        }
+        return true;
+    }
+
+### Number matching
+
+So the idea is that if the character is a number, then we try to parse out a number. It could also be just a period. We want to include the exponent part as well.
+
+
+
+### Letter matching
+
+Here we are looking for possible variable names. We consume it up until the first non word character: [A-Za-z0-9]
+
+This should be extended to include most unicode symbols or be extensible (wordreg could be exposed). 
+
+    function (data, emitter) {
+        var i = data.i,
+            text = data.text,
+            wordreg = /[A-Za-z][A-Za-z0-9]*/g;  //emitter.wordreg?
+
+        wordreg.lastIndex= i;
+        match = wordreg.exec(text);
+        if (match) {
+            data.i = match.lastIndex;
+            data.oldi = i;
+            data.word = match[0];
+            data.match = match;
+            emitter.emit("word found", data);
+            return false;
+        } else {
+            return true;
+        }
+    }

@@ -10,7 +10,7 @@ var scope, token, toParse, symbols = {};
 
 var symbolProto = {
         nud: function () {
-            this.error("Undefined.");
+            this.error("Undefined nud for "+this.value);
         },
         led: function (left) {
             this.error("Missing operator.");
@@ -28,7 +28,6 @@ var symbolProto = {
                     x, m, i, sli;
             
                 var leading = (token.type === "operator") ? str.match(/^\s+/)  : str.match(/^( +)/);
-                console.log(leading);
                 if (leading) {
                     str = str.slice(leading.length);
                     ret.start = start += leading.length;
@@ -40,9 +39,16 @@ var symbolProto = {
                     ret.value = x;
                     ret.type = "number";
                 } else if ( ( m = str.match(/^[a-zA-Z]+/) ) ) {
-                    ret.value = m[0];
-                    ret.end = start + m[0].length;
-                    ret.type = "name";
+            
+                    if ( (token.arity === "name")  || (token.arity === "literal") ) {
+                        ret.value = "*";
+                        ret.end = start;
+                        ret.type = "operator";
+                    } else {
+                        ret.value = m[0];
+                        ret.end = start + m[0].length;
+                        ret.type = "name";
+                    }
                 } else {
                     for (i = 3; i >0; i-=1) {
                         sli = str.slice(0, i);
@@ -53,10 +59,10 @@ var symbolProto = {
                         }
                     }
                     if (!ret.value) {
-                        return null;
+                        ret.end = start;
+                        ret.value = "(end)";
                     }
                 }
-            
                 return ret;
             }
     };
@@ -71,7 +77,11 @@ Scope.prototype = {
     define: function (n) {
         var t = this.def[n.value];
         if (typeof t === "object") {
-            n.error(t.reserved ? "Already reserved." : "Already defined.");
+            if (t.reserved) {
+                n.error("Already reserved");
+            } else {
+                return n;
+            }
         }
         this.def[n.value] = n;
         n.reserved = false;
@@ -81,6 +91,18 @@ Scope.prototype = {
         n.lbp      = 0;
         n.scope    = scope;
         return n;
+    },
+
+    existence : function (n) {
+        var t = this.def[n.value];
+        if (typeof t === "object") {
+            if (t.reserved) {
+                return false;
+            } else {
+                return true;
+            } 
+        }
+        return false;
     },
     find: function (n) {
         var e = this, o;
@@ -124,7 +146,6 @@ var advance = function (id) {
             if (!( Array.prototype.some.call(arguments, function (el) {
                 return (el === token.id) ;
             }) ) ) {
-                console.log(token);
                 token.error("Found " + token.id+ ". Expected one of'" +  Array.prototype.join.call(arguments, ", ")  + "'.");
             } 
         }
@@ -134,8 +155,8 @@ var advance = function (id) {
         }
     
         t = token.next();
-        if (t === null) {
-            token = symbols["(end)"];
+        if (t.value === "(end)") {
+            token = Object.create(symbols["(end)"]);
             return;            
         }
     
@@ -163,6 +184,7 @@ var advance = function (id) {
         }
         token.value = v;
         token.arity = a;
+        console.log(a, v);
         return token;
     };
 
@@ -197,7 +219,6 @@ var statement = function () {
 var statements = function () {
     var a = [], s;
     while (true) {
-        console.log("while", token);
         if (token.id === "}" || token.id === "(end)") {
             break;
         }
@@ -272,6 +293,9 @@ var assignment = function (id) {
         if (left.id !== "." && left.id !== "[" && left.arity !== "name") {
             left.error("Bad lvalue.");
         }
+        if (left.arity === "name") {
+            scope.define(left);
+        }
         this.first = left;
         this.second = expression(9);
         this.assignment = true;
@@ -304,7 +328,7 @@ symbol("]");
 
 symbol("(begin)");
 symbol("(end)");
-symbol("(name)");
+symbol("(name)").nud = itself;
 symbol("(literal)").nud = itself;    
 symbol("(error)");
 
@@ -323,6 +347,8 @@ prefix("(", function () {
 });
 
 prefix("-");
+
+assignment("=");
 
 module.exports = function (str) {
     var ret = {};
