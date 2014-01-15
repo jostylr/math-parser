@@ -72,7 +72,7 @@ So this is a module that returns a function that takes in a string to parse and 
         return this;
     };
 
-    var scope, token, symbols = {};
+    var scope, token, toParse, symbols = {};
 
     var symbolProto = _"Symbol Prototype";
 
@@ -92,7 +92,7 @@ So this is a module that returns a function that takes in a string to parse and 
         var ret = {};
 
         token = symbols["(begin)"];
-        token.toParse = str;
+        toParse = str;
         token.end = 0; // this should be the start of the next token
         scope = new Scope();
         advance();
@@ -437,9 +437,8 @@ It should return the next token or null if the string is exahusted.
 
     function () {
         var start = this.end, 
-            str = this.toParse.slice(start),
-            ret = {toParse: this.toParse, 
-                    start : start},
+            str = toParse.slice(start),
+            ret = { start : start, parent : token},
             x, m, i, sli;
 
 We need to strip out some whitespace and account for it with the start position. If the current token is an operator, then newlines do not terminate the expression and are considered whitespace. Otherwise newlines 
@@ -459,6 +458,11 @@ Now we can try to match it. We try to match number first, then a name, and final
             ret.value = x;
             ret.type = "number";
         } else if ( ( m = str.match(/^[a-zA-Z]+/) ) ) {
+
+We want to support 4x as being 4*x as well as a b being a*b.  So we need to check if the previous token is a number. If so, then we return the multiplication operator.
+
+            if (token.arity 
+
             ret.value = m[0];
             ret.end = start + m[0].length;
             ret.type = "name";
@@ -532,38 +536,76 @@ The walker will be part of the prototype of the base symbol. This allows us to o
 
 
     function (actions) {
+        var self = this, arr;
+        if (Array.isArray(self) ) {
+            arr = [];
+
+If the current object is an array, then we want to go through each statement step. 
+
+            self.forEach(function (el) {
+                arr.push(el.walker(actions, state));
+            });            return actions.array(arr);
+        }
+
+
+Literals have lots of different values and so we group them together by type
+
+        if (self.type === "literal") {
+           return actions.literal(self);
+        }
+
+        if ( (self.type === "operator") ) {
+            return actions[self.value](this);
+        };
+
+still need to think about name, statement. 
+
 
     }
+
 
 
 ### Computation actions
 
 This would be an actions object for doing computations. 
 
-    {   unary : {
-            "-" : function (first) {
-                return first.negate();
+    { 
+        "-" : function (self) {
+            if (self.arity === "binary") {
+                return self.left.value.sub(self.right.value);
+            } else {
+                return self.value.negate();
             }
         },
-        binary : {
-            "+" : function (left, right) {
-                return left.add(right);
-            },
-            "-" : function (left, right) {
-                return left.sub(right);
-            },
-            "*" : function (left, right) {
-                return left.mul(right);
-            },
-            "/" : function (left, right) {
-                return left.div(right);
-            },
-            "^" : function (left, right) {
-                return left.ipow(right);  // !!!! should change this to pow when I have it
+        "+" : function (self) {
+            return self.left.value.add(self.right.value);
+        },
+        "*" : function (self) {
+            return self.left.value.mul(self.right.value);
+        },
+        "/" : function (self) {
+            return self.left.value.div(self.right.value);
+        },
+        "^" : function (self) {
+            return self.left.value.ipow(self.right.value);  // !!!! should change this to pow when I have it
+        },
+
+So this would be a compiled list of statements that can then be covnerted to some useful form. This will probably change, but for now, going to try to make a string of strings.
+
+        array : function (arr) {
+            var i, n = arr.length;
+            for (i = 0; i < n; i += 1) {
+                el = arr[i];
+                if (el && el.hasOwnProperty("str") ) {
+                    arr[i] = el.str();
+                } else {
+                    arr[i].toString();
+                }
             }
         },
-        literal : {
-            
+        literal : function (self) {
+            return self.value;
+        }
 
 
     }

@@ -6,7 +6,7 @@ var itself = function () {
     return this;
 };
 
-var scope, token, symbols = {};
+var scope, token, toParse, symbols = {};
 
 var symbolProto = {
         nud: function () {
@@ -23,9 +23,8 @@ var symbolProto = {
         }, 
         next : function () {
                 var start = this.end, 
-                    str = this.toParse.slice(start),
-                    ret = {toParse: this.toParse, 
-                            start : start},
+                    str = toParse.slice(start),
+                    ret = { start : start, parent : token},
                     x, m, i, sli;
             
                 var leading = (token.type === "operator") ? str.match(/^\s+/)  : str.match(/^( +)/);
@@ -329,7 +328,7 @@ module.exports = function (str) {
     var ret = {};
 
     token = symbols["(begin)"];
-    token.toParse = str;
+    toParse = str;
     token.end = 0; // this should be the start of the next token
     scope = new Scope();
     advance();
