@@ -24,6 +24,10 @@
   "engines": {
     "node": ">0.6"
   },
+  "devDependencies" : {
+    "literate-programming" : "~0.7.5",
+    "tape" : "=2.3.0"
+  },
   "dependencies":{
     "event-when": "=0.5.0",
     "math-numbers": ">=0.1.1"

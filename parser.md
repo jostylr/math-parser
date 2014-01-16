@@ -13,8 +13,7 @@ So it reads through the string, going for various matches. The one with the long
 
 ## Directory structure
 
-* [pratt.js](#pratt-parser "save: |jshint")
-* [index.js](#parser "save: | jshint") The primary entry point into the module
+* [index.js](#pratt-parser "save: |jshint")
 * [examples.json](#examples "save | jshint") A json of examples with supposed results
 * [README.md](#readme "save:| clean raw") The standard README.
 * [package.json](#npm-package "save: json  | jshint") The requisite package file for a npm project. 
@@ -22,35 +21,6 @@ So it reads through the string, going for various matches. The one with the long
 * [LICENSE](#license-mit "save: | clean raw") The MIT license as I think that is the standard in the node community. 
 * [.gitignore](#gitignore "save: | clean raw")
 
-## Simple Parser
-
-So I just want a simple parser example that will split things up using spaces and then tries to parse out arithmetic. 
-
-
-
-    var Parser = function () {
-        return this;
-    };
-
-    var pp = Parser.prototype;
-
-    pp.parse = function (str) {
-        lines = str.split("\n");
-        var trees = [];
-        lines.forEach(function (el) {
-            var tokens = el.split(/\s+/);
-            tokens.forEach(function (el) {
-                if (el === "ans") {
-
-                } else if ( ( m = el.match(/ans\[(\d+\])/) ) ) {
-
-                } else if ( ( op = this.operator(el) ) ) {
-
-                } else if ( ( par = this.bracket(el) ) ) 
-            });
-        });
-
-    };
 
 
 
@@ -102,6 +72,9 @@ So this is a module that returns a function that takes in a string to parse and 
         return s;
     };
 
+    module.exports.compute = _"Computation actions";
+
+
 ### Symbol Prototype
 
 The prototype object for the basic symbol object. 
@@ -119,7 +92,8 @@ The prototype object for the basic symbol object.
         log : function () {
             this.log.push( Array.prototype.slice.call(arguments) );
         }, 
-        next : _"next"
+        next : _"next",
+        walker : _"walker"
     }
 
 ### Symbol Makers
@@ -267,7 +241,6 @@ Each token will inherit a next function that will chunk up the next token. If th
         }
         token.value = v;
         token.arity = a;
-        console.log(a, v);
         return token;
     }
 
@@ -425,6 +398,7 @@ Now some statement work
 
     var statements = function () {
         var a = [], s;
+        a.walker = symbolProto.walker;
         while (true) {
             if (token.id === "}" || token.id === "(end)") {
                 break;
@@ -434,7 +408,7 @@ Now some statement work
                 a.push(s);
             }
         }
-        return a.length === 0 ? null : a.length === 1 ? a[0] : a;
+        return a;   //  array is good to have. a.length === 0 ? null : a.length === 1 ? a[0] : a;
     };
 
     var block = function () {
@@ -561,8 +535,10 @@ How are we going to do this? We have two big options. One is to embed this in th
 
 The walker will be part of the prototype of the base symbol. This allows us to override it for any particular instance or subclass it. When invoked, the walker should be provided an object of actions that are called by using the arity followed by the value. 
 
+The state should be the state of the program. It largely is for variable storage, I think. Probably need some prototype analogous to the scope stuff. !!! do that!!!
 
-    function (actions) {
+
+    function (actions, state) {
         var self = this, arr;
         if (Array.isArray(self) ) {
             arr = [];
@@ -571,21 +547,29 @@ If the current object is an array, then we want to go through each statement ste
 
             self.forEach(function (el) {
                 arr.push(el.walker(actions, state));
-            });            return actions.array(arr);
+            });            
+
+We return the array of used statements after running it through our actions. 
+            
+            return actions.array(arr);
         }
 
 
 Literals have lots of different values and so we group them together by type
 
-        if (self.type === "literal") {
-           return actions.literal(self);
+        if (self.type === "number") {
+           return actions.number(self, actions, state);
         }
 
-        if ( (self.type === "operator") ) {
-            return actions[self.value](this);
-        };
+        if (self.type === "operator") {
+            return actions[self.value](self, actions, state);
+        }
 
-still need to think about name, statement. 
+For names, if the walker sees it, then it should have a value to be returned. This should be in some sort of scope thingy. For now, we will just use state[name] for the storage/retrieval. Once working, this should have scope injected.
+
+        if (self.type === "name") {
+            return state[self.value].walker(actions, state);
+        }
 
 
     }
@@ -597,45 +581,56 @@ still need to think about name, statement.
 This would be an actions object for doing computations. 
 
     { 
-        "-" : function (self) {
+        "-" : function (self, actions, state) {
             if (self.arity === "binary") {
-                return self.left.value.sub(self.right.value);
+                return self.first.walker(actions, state).sub(self.second.walker(actions, state));
             } else {
-                return self.value.negate();
+                return self.first.walker(actions, state).neg();
             }
         },
-        "+" : function (self) {
-            return self.left.value.add(self.right.value);
-        },
-        "*" : function (self) {
-            return self.left.value.mul(self.right.value);
-        },
-        "/" : function (self) {
-            return self.left.value.div(self.right.value);
-        },
-        "^" : function (self) {
-            return self.left.value.ipow(self.right.value);  // !!!! should change this to pow when I have it
+        _":binary | substitute(SYM, +, OP, add)",
+        _":binary | substitute(SYM, *, OP, mul)",
+        _":binary | substitute(SYM, /, OP, div)",
+        _":binary | substitute(SYM, ^, OP, ipow)", // !!!! should change this to pow when I have it
+
+Assignments. For now, we just want to store, but in the future, this symbol will have more roles. 
+
+        "=" : function (self, actions, state) {
+            if (self.first.type === "name") {   
+                state[self.first.value] = self.second;
+            } else {
+                console.log("add more functionality to assignment to handle this: ",  self);
+            }
         },
 
 So this would be a compiled list of statements that can then be covnerted to some useful form. This will probably change, but for now, going to try to make a string of strings.
 
-        array : function (arr) {
-            var i, n = arr.length;
+        array : function (arr, actions, state) {
+            var i, n = arr.length, el;
+            var ret = [];
             for (i = 0; i < n; i += 1) {
                 el = arr[i];
-                if (el && el.hasOwnProperty("str") ) {
-                    arr[i] = el.str();
-                } else {
-                    arr[i].toString();
-                }
+                if (el && el.str ) {
+                    ret.push(el.str());
+                } else if (arr[i]) {
+                    ret.push(toString());
+                } 
             }
+            return ret;
         },
-        literal : function (self) {
+        number : function (self) {
             return self.value;
         }
 
 
     }
+
+[binary]()
+
+    "SYM" : function (self, actions, state) {
+            return self.first.walker(actions, state).OP(self.second.walker(actions, state));
+    }
+
 
 ## Usage Example
 
@@ -682,7 +677,7 @@ rep/10^length-1
 
 x: 1 = sin(x)
 
-x:5 1 = sin(x), 0 < x < pi, x~2, 
+1 = sin(x) : 0 < x < pi, x~2, x::5  meaning x should be between 0 and pi, start the guess about 2, and restrict to a precision of 5 digits. 
 
 
 
@@ -735,6 +730,10 @@ The requisite npm package file.
       "main": "index.js",
       "engines": {
         "node": ">0.6"
+      },
+      "devDependencies" : {
+        "literate-programming" : "~0.7.5",
+        "tape" : "=2.3.0"
       },
       "dependencies":{
         "event-when": "=0.5.0",

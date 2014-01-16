@@ -64,6 +64,32 @@ var symbolProto = {
                     }
                 }
                 return ret;
+            },
+        walker : function (actions, state) {
+                var self = this, arr;
+                if (Array.isArray(self) ) {
+                    arr = [];
+            
+                    self.forEach(function (el) {
+                        arr.push(el.walker(actions, state));
+                    });            
+            
+                    
+                    return actions.array(arr);
+                }
+            
+                if (self.type === "literal") {
+                   return actions.literal(self, actions, state);
+                }
+            
+                if (self.type === "operator") {
+                    return actions[self.value](self, actions, state);
+                };
+            
+                if (self.type === "name") {
+                    return state[self.value].walker(actions, state);
+                }
+            
             }
     };
 
@@ -184,7 +210,6 @@ var advance = function (id) {
         }
         token.value = v;
         token.arity = a;
-        console.log(a, v);
         return token;
     };
 
@@ -218,6 +243,8 @@ var statement = function () {
 
 var statements = function () {
     var a = [], s;
+    a.walker = symbolProto.walker;
+    console.log(a);
     while (true) {
         if (token.id === "}" || token.id === "(end)") {
             break;
@@ -227,7 +254,7 @@ var statements = function () {
             a.push(s);
         }
     }
-    return a.length === 0 ? null : a.length === 1 ? a[0] : a;
+    return a;   //  array is good to have. a.length === 0 ? null : a.length === 1 ? a[0] : a;
 };
 
 var block = function () {
@@ -363,3 +390,37 @@ module.exports = function (str) {
     scope = scope.pop();
     return s;
 };
+
+module.exports.compute = { 
+        "-" : function (self) {
+            if (self.arity === "binary") {
+                return self.first.walker().sub(self.second.walker();
+            } else {
+                return self.first().negate();
+            }
+        },
+    
+        "=" : function (self) {
+            if (self.first.type === "name") {   
+                state[self.first.value] = self.second;
+            } else {
+                console.log("add more functionality to assignment to handle this: ",  self);
+            }
+        }
+    
+        array : function (arr, actions, state) {
+            var i, n = arr.length;
+            for (i = 0; i < n; i += 1) {
+                el = arr[i];
+                if (el && el.hasOwnProperty("str") ) {
+                    arr[i] = el.str();
+                } else {
+                    arr[i].toString();
+                }
+            }
+        },
+        literal : function (self) {
+            return self.value;
+        }
+    
+    };
