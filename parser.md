@@ -398,7 +398,7 @@ Now some statement work
 
     var statements = function () {
         var a = [], s;
-        a.walker = symbolProto.walker;
+        a.walker = symbolProto.walker;  // to walk the statements
         while (true) {
             if (token.id === "}" || token.id === "(end)") {
                 break;
@@ -433,7 +433,8 @@ It should return the next token or null if the string is exahusted.
         var start = this.end, 
             str = toParse.slice(start),
             ret = { start : start, parent : token},
-            x, m, i, sli;
+            x, m, i, sli, 
+            token = this;
 
 We need to strip out some whitespace and account for it with the start position. If the current token is an operator, then newlines do not terminate the expression and are considered whitespace. Otherwise newlines 
 
@@ -738,6 +739,12 @@ The requisite npm package file.
       "dependencies":{
         "event-when": "=0.5.0",
         "math-numbers": ">=0.1.1"
+      },
+    "scripts" : { 
+        "prepublish" : "node ./node_modules/literate-programming/bin/literate-programming.js parser.md",
+        "compile" : "node ./node_modules/literate-programming/bin/literate-programming.js parser.md",
+        "test" : "node ./test/testrunner.js",
+        "testq" : "node ./test/testrunner.js | grep -v -e ^ok"
       },
       "keywords": ["math parser"],
       "preferGlobal": "false"

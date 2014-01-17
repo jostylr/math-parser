@@ -25,7 +25,8 @@ var symbolProto = {
                 var start = this.end, 
                     str = toParse.slice(start),
                     ret = { start : start, parent : token},
-                    x, m, i, sli;
+                    x, m, i, sli, 
+                    token = this;
             
                 var leading = (token.type === "operator") ? str.match(/^\s+/)  : str.match(/^( +)/);
                 if (leading) {
@@ -243,7 +244,7 @@ var statement = function () {
 
 var statements = function () {
     var a = [], s;
-    a.walker = symbolProto.walker;
+    a.walker = symbolProto.walker;  // to walk the statements
     while (true) {
         if (token.id === "}" || token.id === "(end)") {
             break;
