@@ -455,7 +455,7 @@ Now we can try to match it. We try to match number first, then a name, and final
 
 We want to support 4x as being 4*x as well as a b being a*b.  So we need to check if the previous token is a number. If so, then we return the multiplication operator.
 
-            if ( (token.arity === "name")  || (token.arity === "literal") ) {
+            if ( (token.arity === "name")  || (token.arity === "number") ) {
                 ret.value = "*";
                 ret.end = start;
                 ret.type = "operator";

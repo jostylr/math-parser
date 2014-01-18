@@ -19,7 +19,8 @@ We just want to parse out some arithmetic statements.
 
 Functions    
 
-    console.log(Parser("f = (x) => 2x^2; f(3); f(1/2);").walker(Parser.compute, {}));
+    console.log(Parser("f =  x, y, z => 2x^2+3y-5z; f(3); f(1/2);").walker(Parser.compute, {}));
 
 
-Function syntax:  function f (x) {..},   f = (x) => {..}  where {..} could be a block or a single expression. Arrows have the this of the surrounding context. 
+Function syntax:   {..},   f = (x) => {..}  where {..} could be a block or a single expression. Arrows have the this of the surrounding context. 
+
