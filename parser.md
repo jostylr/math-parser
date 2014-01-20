@@ -639,6 +639,21 @@ The idea for this is that we create our own stack. Each element of the tree shou
 
 As an example, let's say  3*7+4 has been parsed into {op: +, left: {op:*, left:3, right:7}, right: 4} (roughly, our numbers are in a literal thing and all that). Then we see this, we can create for the stack,  [{tag: "binary", op:"+", left:left, right:right}, {tag:"expression", val:4, store:right},  {tag:"expression", val : {op:*, left:3, right:7}, store:left}].  Then we pop off the left one, parse it, plug its stack back in, etc., storing the expression values obtained into the provided storage objects under store. 
 
+#### Step
+
+This is the function that will manage the stack on a one-step level. It takes in the stack and an environment that holds named variables, etc. There is also an actions hash that has tag commands. This allows this to be a bit of a general structure.
+
+    function (stack, env, actions) {
+        var next = stack.pop();
+
+        actions[next.tag](next, env);
+
+        
+
+    }
+
+
+
 ## Usage Example
 
 This is an example program to using this library; replace './index.js' with 'math-parser'.
